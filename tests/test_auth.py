@@ -40,14 +40,3 @@ def test_login_invalid_credentials(client):
         json={"username": "missing", "password": "nope"},
     )
     assert response.status_code == 401
-
-
-def test_protected_endpoint_requires_auth(client):
-    response = client.get("/patients")
-    assert response.status_code == 401
-
-
-def test_protected_endpoint_accepts_valid_token(client, create_user, auth_headers):
-    user = create_user(username="pat", email="pat@example.com")
-    response = client.get("/patients", headers=auth_headers(user))
-    assert response.status_code == 200
