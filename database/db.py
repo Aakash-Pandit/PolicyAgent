@@ -65,3 +65,17 @@ def drop_policies_table():
 
     Policy.__table__.drop(bind=engine, checkfirst=True)
     init_db()
+
+
+def drop_leave_requests_table():
+    from users.models import LeaveRequest
+
+    LeaveRequest.__table__.drop(bind=engine, checkfirst=True)
+    init_db()
+
+
+def drop_user_organizations_table():
+    from organizations.models import UserOrganization
+
+    UserOrganization.__table__.drop(bind=engine, checkfirst=True)
+    init_db()
