@@ -1,6 +1,4 @@
 import os
-import uuid
-from datetime import datetime
 
 from fastapi import Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -24,24 +22,8 @@ from organizations.models import (
     UserOrganizationsListResponse,
     UserOrganizationUpdate,
 )
+from organizations.utils import save_upload_file
 from users.models import User
-
-# Directory for storing uploaded policy files
-UPLOAD_DIR = "uploads/policies"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-
-async def save_upload_file(upload_file: UploadFile) -> str:
-    """Save an uploaded file and return the file path."""
-    file_extension = os.path.splitext(upload_file.filename)[1] if upload_file.filename else ""
-    unique_filename = f"{uuid.uuid4()}{file_extension}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
-
-    content = await upload_file.read()
-    with open(file_path, "wb") as f:
-        f.write(content)
-
-    return file_path
 
 
 # Organization APIs
@@ -482,7 +464,7 @@ async def join_organization(
         .filter(
             UserOrganization.user_id == membership.user_id,
             UserOrganization.organization_id == membership.organization_id,
-            UserOrganization.is_active == True,
+            UserOrganization.is_active.is_(True),
         )
         .first()
     )

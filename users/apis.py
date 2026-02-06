@@ -21,25 +21,12 @@ from users.models import (
     UserResponse,
     UsersListResponse,
 )
-
-
-def _coerce_user_type(value: str) -> UserType:
-    normalized = value.strip().upper()
-    try:
-        return UserType[normalized]
-    except KeyError:
-        raise HTTPException(status_code=403, detail="Admin access required")
-
-
-def _require_admin(user_type: str) -> None:
-    if _coerce_user_type(user_type) != UserType.ADMIN:
-        raise HTTPException(status_code=403, detail="Admin access required")
-
-
-def _require_authenticated_user(request: Request):
-    if not request.user or not request.user.is_authenticated:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    return request.user
+from users.utils import (
+    build_leave_request_item,
+    coerce_user_type,
+    require_admin,
+    require_authenticated_user,
+)
 
 
 @app.get("/users", response_model=UsersListResponse)
@@ -47,7 +34,7 @@ async def get_users(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    _require_admin(request.user.user_type)
+    require_admin(request.user.user_type)
     rows = db.query(User).order_by(User.created.desc()).all()
     users = [
         UserItem(
@@ -78,7 +65,7 @@ async def get_user(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    current_user = _require_authenticated_user(request)
+    current_user = require_authenticated_user(request)
     if current_user.user_id != user_id:
         raise HTTPException(status_code=403, detail="User access restricted")
     user = db.query(User).filter(User.id == user_id).first()
@@ -145,38 +132,15 @@ async def drop_users_db_table():
 
 
 # Leave Request APIs
-def _build_leave_request_item(row, db):
-    """Helper to build LeaveRequestItem from a LeaveRequest row."""
-    user = db.query(User).filter(User.id == row.user_id).first()
-    org = db.query(Organization).filter(Organization.id == row.organization_id).first()
-    reviewer = db.query(User).filter(User.id == row.reviewed_by).first() if row.reviewed_by else None
-    return LeaveRequestItem(
-        id=str(row.id),
-        user_id=str(row.user_id),
-        username=user.username if user else None,
-        organization_id=str(row.organization_id),
-        organization_name=org.name if org else None,
-        date=row.date,
-        leave_type=row.leave_type,
-        reason=row.reason,
-        is_accepted=row.is_accepted,
-        reviewed_by=str(row.reviewed_by) if row.reviewed_by else None,
-        reviewer_name=reviewer.username if reviewer else None,
-        reviewed_at=row.reviewed_at,
-        applied_at=row.applied_at,
-        created=row.created,
-    )
-
-
 @app.get("/leave-requests", response_model=LeaveRequestsListResponse)
 async def get_leave_requests(
     request: Request,
     db: Session = Depends(get_db),
 ):
     """Get all leave requests. Admin sees all, regular users see only their own."""
-    current_user = _require_authenticated_user(request)
+    current_user = require_authenticated_user(request)
 
-    if _coerce_user_type(current_user.user_type) == UserType.ADMIN:
+    if coerce_user_type(current_user.user_type) == UserType.ADMIN:
         rows = db.query(LeaveRequest).order_by(LeaveRequest.applied_at.desc()).all()
     else:
         rows = (
@@ -186,7 +150,7 @@ async def get_leave_requests(
             .all()
         )
 
-    leave_requests = [_build_leave_request_item(row, db) for row in rows]
+    leave_requests = [build_leave_request_item(row, db) for row in rows]
 
     total = len(leave_requests)
     message = "No leave requests found" if total == 0 else "Leave requests retrieved"
@@ -204,7 +168,7 @@ async def get_leave_request(
     db: Session = Depends(get_db),
 ):
     """Get a specific leave request."""
-    current_user = _require_authenticated_user(request)
+    current_user = require_authenticated_user(request)
 
     leave_request = db.query(LeaveRequest).filter(LeaveRequest.id == leave_request_id).first()
     if not leave_request:
@@ -212,12 +176,12 @@ async def get_leave_request(
 
     # Regular users can only see their own leave requests
     if (
-        _coerce_user_type(current_user.user_type) != UserType.ADMIN
+        coerce_user_type(current_user.user_type) != UserType.ADMIN
         and str(leave_request.user_id) != current_user.user_id
     ):
         raise HTTPException(status_code=403, detail="Access denied")
 
-    return _build_leave_request_item(leave_request, db)
+    return build_leave_request_item(leave_request, db)
 
 
 @app.get("/organizations/{organization_id}/leave-requests", response_model=LeaveRequestsListResponse)
@@ -227,7 +191,7 @@ async def get_organization_leave_requests(
     db: Session = Depends(get_db),
 ):
     """Get all leave requests for an organization. Admin only."""
-    _require_admin(request.user.user_type)
+    require_admin(request.user.user_type)
 
     org = db.query(Organization).filter(Organization.id == organization_id).first()
     if not org:
@@ -240,7 +204,7 @@ async def get_organization_leave_requests(
         .all()
     )
 
-    leave_requests = [_build_leave_request_item(row, db) for row in rows]
+    leave_requests = [build_leave_request_item(row, db) for row in rows]
 
     total = len(leave_requests)
     message = "No leave requests found" if total == 0 else "Leave requests retrieved"
@@ -258,7 +222,7 @@ async def apply_leave_request(
     db: Session = Depends(get_db),
 ):
     """Apply for a leave request. User must be a member of the organization."""
-    current_user = _require_authenticated_user(request)
+    current_user = require_authenticated_user(request)
 
     # Verify organization exists
     org = db.query(Organization).filter(Organization.id == leave_request.organization_id).first()
@@ -271,7 +235,7 @@ async def apply_leave_request(
         .filter(
             UserOrganization.user_id == current_user.user_id,
             UserOrganization.organization_id == leave_request.organization_id,
-            UserOrganization.is_active == True,
+            UserOrganization.is_active.is_(True),
         )
         .first()
     )
@@ -330,7 +294,7 @@ async def review_leave_request(
     db: Session = Depends(get_db),
 ):
     """Review (accept/reject) a leave request. Admin only."""
-    _require_admin(request.user.user_type)
+    require_admin(request.user.user_type)
 
     leave_request = db.query(LeaveRequest).filter(LeaveRequest.id == leave_request_id).first()
     if not leave_request:
@@ -364,7 +328,7 @@ async def delete_leave_request(
     db: Session = Depends(get_db),
 ):
     """Delete a leave request. Users can delete their own, admins can delete any."""
-    current_user = _require_authenticated_user(request)
+    current_user = require_authenticated_user(request)
 
     leave_request = db.query(LeaveRequest).filter(LeaveRequest.id == leave_request_id).first()
     if not leave_request:
@@ -372,7 +336,7 @@ async def delete_leave_request(
 
     # Regular users can only delete their own leave requests
     if (
-        _coerce_user_type(current_user.user_type) != UserType.ADMIN
+        coerce_user_type(current_user.user_type) != UserType.ADMIN
         and str(leave_request.user_id) != current_user.user_id
     ):
         raise HTTPException(status_code=403, detail="Access denied")
