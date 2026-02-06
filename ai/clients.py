@@ -5,6 +5,8 @@ import cohere
 from ai.prompts import PREAMBLE
 from appointments.constants import get_appointment_function_map
 from appointments.tools import APPOINTMENT_TOOLS
+from organizations.constants import get_organization_function_map
+from organizations.tools import ORGANIZATION_TOOLS
 
 
 class CohereClient:
@@ -14,8 +16,9 @@ class CohereClient:
         self.preamble = PREAMBLE
         self.function_map = {
             **get_appointment_function_map(),
+            **get_organization_function_map(),
         }
-        self.tools = [*APPOINTMENT_TOOLS]
+        self.tools = [*APPOINTMENT_TOOLS, *ORGANIZATION_TOOLS]
         self.message = message or ""
 
     def chat(

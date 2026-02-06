@@ -22,11 +22,13 @@ os.environ.setdefault("JWT_EXPIRE_MINUTES", "60")
 import appointments.db as appointments_db
 import auth.backend as auth_backend
 import database.db as db
+import organizations.db as organizations_db
 from application.app import app as fastapi_app
 from auth.jwt import create_access_token
 from auth.passwords import hash_password
 from appointments.choices import AppointmentStatus
 from appointments.models import Appointment
+from organizations.models import Organization, Policy
 from users.choices import UserType
 from users.models import User
 
@@ -73,6 +75,7 @@ def app(db_engine):
 
     appointments_db.SessionLocal = db.SessionLocal
     auth_backend.SessionLocal = db.SessionLocal
+    organizations_db.SessionLocal = db.SessionLocal
 
     def override_get_db():
         session = db.SessionLocal()
@@ -172,6 +175,60 @@ def create_appointment(db_session):
         return appointment
 
     return _create_appointment
+
+
+@pytest.fixture()
+def create_organization(db_session):
+    def _create_organization(
+        *,
+        name="Test Organization",
+        description="A test organization",
+        address="123 Test St",
+        email="test@org.com",
+        phone="555-0000",
+        is_active=True,
+    ):
+        org = Organization(
+            name=name,
+            description=description,
+            address=address,
+            email=email,
+            phone=phone,
+            is_active=is_active,
+        )
+        db_session.add(org)
+        db_session.commit()
+        db_session.refresh(org)
+        return org
+
+    return _create_organization
+
+
+@pytest.fixture()
+def create_policy(db_session):
+    def _create_policy(
+        *,
+        organization_id,
+        name="Default Policy",
+        description="Default leave policy",
+        max_leave_days=20,
+        carry_forward_days=5,
+        is_active=True,
+    ):
+        policy = Policy(
+            organization_id=organization_id,
+            name=name,
+            description=description,
+            max_leave_days=max_leave_days,
+            carry_forward_days=carry_forward_days,
+            is_active=is_active,
+        )
+        db_session.add(policy)
+        db_session.commit()
+        db_session.refresh(policy)
+        return policy
+
+    return _create_policy
 
 
 @pytest.fixture()

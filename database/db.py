@@ -51,3 +51,17 @@ def drop_appointments_table():
 
     Appointment.__table__.drop(bind=engine, checkfirst=True)
     init_db()
+
+
+def drop_organizations_table():
+    from organizations.models import Organization
+
+    Organization.__table__.drop(bind=engine, checkfirst=True)
+    init_db()
+
+
+def drop_policies_table():
+    from organizations.models import Policy
+
+    Policy.__table__.drop(bind=engine, checkfirst=True)
+    init_db()
