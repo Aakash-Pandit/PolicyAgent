@@ -376,39 +376,6 @@ async def get_user_organization(membership_id: str, db: Session = Depends(get_db
     )
 
 
-@app.get("/users/{user_id}/organizations", response_model=UserOrganizationsListResponse)
-async def get_organizations_for_user(user_id: str, db: Session = Depends(get_db)):
-    """Get all organizations a user belongs to."""
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    rows = db.query(UserOrganization).filter(UserOrganization.user_id == user_id).order_by(UserOrganization.joined_date.desc()).all()
-    memberships = []
-    for row in rows:
-        org = db.query(Organization).filter(Organization.id == row.organization_id).first()
-        memberships.append(
-            UserOrganizationItem(
-                id=str(row.id),
-                user_id=str(row.user_id),
-                username=user.username,
-                organization_id=str(row.organization_id),
-                organization_name=org.name if org else None,
-                joined_date=row.joined_date,
-                left_date=row.left_date,
-                is_active=row.is_active,
-                created=row.created,
-            )
-        )
-    total = len(memberships)
-    message = "No organizations found for user" if total == 0 else "Organizations retrieved"
-    return UserOrganizationsListResponse(
-        memberships=memberships,
-        total=total,
-        message=message,
-    )
-
-
 @app.get("/organizations/{organization_id}/members", response_model=UserOrganizationsListResponse)
 async def get_members_for_organization(organization_id: str, db: Session = Depends(get_db)):
     """Get all members of an organization."""
