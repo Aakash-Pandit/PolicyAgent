@@ -175,7 +175,7 @@ async def drop_users_db_table():
 
 
 # Leave Request APIs
-@app.get("/leave-requests", response_model=LeaveRequestsListResponse)
+@app.get("/leave_requests", response_model=LeaveRequestsListResponse)
 async def get_leave_requests(
     request: Request,
     db: Session = Depends(get_db),
@@ -204,7 +204,7 @@ async def get_leave_requests(
     )
 
 
-@app.get("/leave-requests/{leave_request_id}", response_model=LeaveRequestItem)
+@app.get("/leave_requests/{leave_request_id}", response_model=LeaveRequestItem)
 async def get_leave_request(
     leave_request_id: str,
     request: Request,
@@ -227,7 +227,7 @@ async def get_leave_request(
     return build_leave_request_item(leave_request, db)
 
 
-@app.get("/organizations/{organization_id}/leave-requests", response_model=LeaveRequestsListResponse)
+@app.get("/organizations/{organization_id}/leave_requests", response_model=LeaveRequestsListResponse)
 async def get_organization_leave_requests(
     organization_id: str,
     request: Request,
@@ -258,7 +258,7 @@ async def get_organization_leave_requests(
     )
 
 
-@app.post("/leave-requests", response_model=LeaveRequestResponse)
+@app.post("/leave_requests", response_model=LeaveRequestResponse)
 async def apply_leave_request(
     leave_request: LeaveRequestCreate,
     request: Request,
@@ -329,7 +329,7 @@ async def apply_leave_request(
     )
 
 
-@app.patch("/leave-requests/{leave_request_id}/review", response_model=LeaveRequestResponse)
+@app.patch("/leave_requests/{leave_request_id}/review", response_model=LeaveRequestResponse)
 async def review_leave_request(
     leave_request_id: str,
     review: LeaveRequestReview,
@@ -364,7 +364,7 @@ async def review_leave_request(
     )
 
 
-@app.delete("/leave-requests/{leave_request_id}")
+@app.delete("/leave_requests/{leave_request_id}")
 async def delete_leave_request(
     leave_request_id: str,
     request: Request,
@@ -389,7 +389,7 @@ async def delete_leave_request(
     return {"status": "ok", "message": "Leave request deleted"}
 
 
-@app.delete("/admin/drop-leave-requests-db")
+@app.delete("/admin/drop-leave_requests-db")
 async def drop_leave_requests_db_table():
     drop_leave_requests_table()
     return {"status": "ok", "message": "Leave requests database table dropped"}
