@@ -26,7 +26,7 @@ POLICY_KEYWORDS = {
 }
 
 
-class SchedulingAgent:
+class PolicyAgent:
     def __init__(self, question: str, session_id: str | None = None):
         self.question = question
         self.session_id = session_id
