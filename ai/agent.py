@@ -7,7 +7,7 @@ SESSION_MEMORY: dict[str, list[dict[str, str]]] = {}
 MAX_HISTORY = 20
 
 
-class SchedulingAgent:
+class PolicyAgent:
     def __init__(self, question: str, session_id: str | None = None):
         self.question = question
         self.session_id = session_id

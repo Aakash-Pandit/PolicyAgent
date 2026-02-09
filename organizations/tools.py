@@ -1,19 +1,14 @@
 ORGANIZATION_TOOLS = [
     {
-        "name": "get_organization_by_name",
+        "name": "get_organization_details",
         "description": "Returns organization details by searching for the name.",
         "parameter_definitions": {
-            "name": {
-                "description": "The name or partial name of the organization.",
+            "organization_name": {
+                "description": "The name of the organization.",
                 "type": "str",
                 "required": True,
             },
         },
-    },
-    {
-        "name": "get_all_organizations",
-        "description": "Returns a list of all active organizations.",
-        "parameter_definitions": {},
     },
     {
         "name": "get_policies_for_organization",
