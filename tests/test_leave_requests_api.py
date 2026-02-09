@@ -9,7 +9,7 @@ def test_apply_leave_request(
     create_user_organization(user_id=user.id, organization_id=org.id)
 
     response = client.post(
-        "/leave-requests",
+        "/leave_requests",
         headers=auth_headers(user),
         json={
             "organization_id": str(org.id),
@@ -31,7 +31,7 @@ def test_apply_leave_request_not_member(client, create_user, create_organization
     org = create_organization(name="Another Org")
 
     response = client.post(
-        "/leave-requests",
+        "/leave_requests",
         headers=auth_headers(user),
         json={
             "organization_id": str(org.id),
@@ -52,7 +52,7 @@ def test_apply_duplicate_leave_request(
 
     # First request
     response1 = client.post(
-        "/leave-requests",
+        "/leave_requests",
         headers=auth_headers(user),
         json={
             "organization_id": str(org.id),
@@ -64,7 +64,7 @@ def test_apply_duplicate_leave_request(
 
     # Duplicate request for same date
     response2 = client.post(
-        "/leave-requests",
+        "/leave_requests",
         headers=auth_headers(user),
         json={
             "organization_id": str(org.id),
@@ -95,7 +95,7 @@ def test_get_leave_requests_regular_user(
     create_leave_request(user_id=user2.id, organization_id=org.id)
 
     # User1 should only see their own leave request
-    response = client.get("/leave-requests", headers=auth_headers(user1))
+    response = client.get("/leave_requests", headers=auth_headers(user1))
     assert response.status_code == 200
     assert response.json()["total"] == 1
 
@@ -121,7 +121,7 @@ def test_get_leave_requests_admin_user(
     create_leave_request(user_id=user.id, organization_id=org.id)
 
     # Admin should see all leave requests
-    response = client.get("/leave-requests", headers=auth_headers(admin))
+    response = client.get("/leave_requests", headers=auth_headers(admin))
     assert response.status_code == 200
     assert response.json()["total"] == 2
 
@@ -149,7 +149,7 @@ def test_get_organization_leave_requests(
 
     # Get leave requests for org1 only
     response = client.get(
-        f"/organizations/{org1.id}/leave-requests", headers=auth_headers(admin)
+        f"/organizations/{org1.id}/leave_requests", headers=auth_headers(admin)
     )
     assert response.status_code == 200
     assert response.json()["total"] == 1
@@ -175,7 +175,7 @@ def test_review_accept_leave_request_admin_only(
 
     # Admin accepts the leave request
     response = client.patch(
-        f"/leave-requests/{leave_request.id}/review",
+        f"/leave_requests/{leave_request.id}/review",
         headers=auth_headers(admin),
         json={"is_accepted": True},
     )
@@ -202,7 +202,7 @@ def test_review_leave_request_non_admin_denied(
 
     # Regular user tries to review - should fail
     response = client.patch(
-        f"/leave-requests/{leave_request.id}/review",
+        f"/leave_requests/{leave_request.id}/review",
         headers=auth_headers(user),
         json={"is_accepted": True},
     )
@@ -230,7 +230,7 @@ def test_review_reject_leave_request_admin_only(
 
     # Admin rejects the leave request
     response = client.patch(
-        f"/leave-requests/{leave_request.id}/review",
+        f"/leave_requests/{leave_request.id}/review",
         headers=auth_headers(admin),
         json={"is_accepted": False},
     )
@@ -253,7 +253,7 @@ def test_delete_own_leave_request(
     leave_request = create_leave_request(user_id=user.id, organization_id=org.id)
 
     response = client.delete(
-        f"/leave-requests/{leave_request.id}",
+        f"/leave_requests/{leave_request.id}",
         headers=auth_headers(user),
     )
     assert response.status_code == 200
@@ -278,7 +278,7 @@ def test_delete_other_user_leave_request_denied(
 
     # User2 tries to delete User1's leave request - should fail
     response = client.delete(
-        f"/leave-requests/{leave_request.id}",
+        f"/leave_requests/{leave_request.id}",
         headers=auth_headers(user2),
     )
     assert response.status_code == 403
@@ -303,7 +303,7 @@ def test_admin_can_delete_any_leave_request(
 
     # Admin can delete any user's leave request
     response = client.delete(
-        f"/leave-requests/{leave_request.id}",
+        f"/leave_requests/{leave_request.id}",
         headers=auth_headers(admin),
     )
     assert response.status_code == 200
@@ -324,7 +324,7 @@ def test_get_single_leave_request(
     leave_request = create_leave_request(user_id=user.id, organization_id=org.id)
 
     response = client.get(
-        f"/leave-requests/{leave_request.id}",
+        f"/leave_requests/{leave_request.id}",
         headers=auth_headers(user),
     )
     assert response.status_code == 200
@@ -338,7 +338,7 @@ def test_leave_request_not_found(client, create_user, auth_headers):
     user = create_user(username="user", email="user@example.com")
 
     response = client.get(
-        "/leave-requests/00000000-0000-0000-0000-000000000000",
+        "/leave_requests/00000000-0000-0000-0000-000000000000",
         headers=auth_headers(user),
     )
     assert response.status_code == 404

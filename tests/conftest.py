@@ -19,15 +19,12 @@ os.environ.setdefault("JWT_SECRET", "test-secret")
 os.environ.setdefault("JWT_ALGORITHM", "HS256")
 os.environ.setdefault("JWT_EXPIRE_MINUTES", "60")
 
-import appointments.db as appointments_db
 import auth.backend as auth_backend
 import database.db as db
 import organizations.db as organizations_db
 from application.app import app as fastapi_app
 from auth.jwt import create_access_token
 from auth.passwords import hash_password
-from appointments.choices import AppointmentStatus
-from appointments.models import Appointment
 from organizations.models import Organization, Policy, UserOrganization
 from users.choices import LeaveType, UserType
 from users.models import LeaveRequest, User
@@ -67,28 +64,11 @@ def db_engine(tmp_path_factory):
     return create_engine(url, connect_args=connect_args)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def app(db_engine):
     db.engine = db_engine
-    db.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
-    db.Base.metadata.bind = db_engine
-
-    appointments_db.SessionLocal = db.SessionLocal
-    auth_backend.SessionLocal = db.SessionLocal
-    organizations_db.SessionLocal = db.SessionLocal
-
-    def override_get_db():
-        session = db.SessionLocal()
-        try:
-            yield session
-        finally:
-            session.close()
-
-    db.Base.metadata.create_all(bind=db_engine)
-    fastapi_app.dependency_overrides[db.get_db] = override_get_db
-    yield fastapi_app
-    fastapi_app.dependency_overrides.clear()
-    db.Base.metadata.drop_all(bind=db_engine)
+    db.SessionLocal.configure(bind=db_engine)
+    return fastapi_app
 
 
 @pytest.fixture(autouse=True)
@@ -150,31 +130,6 @@ def create_user(db_session):
         return user
 
     return _create_user
-
-
-@pytest.fixture()
-def create_appointment(db_session):
-    def _create_appointment(
-        *,
-        title="Test Appointment",
-        description=None,
-        date_and_time=None,
-        duration=30,
-        status=AppointmentStatus.scheduled,
-    ):
-        appointment = Appointment(
-            title=title,
-            description=description,
-            date_and_time=date_and_time or datetime(2026, 1, 30, 10, 0, 0),
-            duration=duration,
-            status=status,
-        )
-        db_session.add(appointment)
-        db_session.commit()
-        db_session.refresh(appointment)
-        return appointment
-
-    return _create_appointment
 
 
 @pytest.fixture()

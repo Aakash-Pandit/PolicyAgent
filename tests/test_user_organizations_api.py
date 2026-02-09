@@ -3,7 +3,7 @@ def test_join_organization(client, create_user, create_organization, auth_header
     org = create_organization(name="Test Company")
 
     response = client.post(
-        "/user-organizations",
+        "/user_organizations",
         headers=auth_headers(user),
         json={
             "user_id": str(user.id),
@@ -27,7 +27,7 @@ def test_cannot_join_same_organization_twice(
     create_user_organization(user_id=user.id, organization_id=org.id)
 
     response = client.post(
-        "/user-organizations",
+        "/user_organizations",
         headers=auth_headers(user),
         json={
             "user_id": str(user.id),
@@ -46,7 +46,7 @@ def test_get_user_organizations(
     org = create_organization(name="Test Company")
     create_user_organization(user_id=user.id, organization_id=org.id)
 
-    response = client.get("/user-organizations", headers=auth_headers(user))
+    response = client.get("/user_organizations", headers=auth_headers(user))
     assert response.status_code == 200
     assert response.json()["total"] == 1
 
@@ -59,7 +59,7 @@ def test_get_single_membership(
     membership = create_user_organization(user_id=user.id, organization_id=org.id)
 
     response = client.get(
-        f"/user-organizations/{membership.id}", headers=auth_headers(user)
+        f"/user_organizations/{membership.id}", headers=auth_headers(user)
     )
     assert response.status_code == 200
     assert response.json()["id"] == str(membership.id)
@@ -106,7 +106,7 @@ def test_update_membership_left_date(
 
     # User leaves the company
     response = client.patch(
-        f"/user-organizations/{membership.id}",
+        f"/user_organizations/{membership.id}",
         headers=auth_headers(user),
         json={
             "left_date": "2026-06-30T00:00:00",
@@ -126,7 +126,7 @@ def test_delete_membership(
     membership = create_user_organization(user_id=user.id, organization_id=org.id)
 
     response = client.delete(
-        f"/user-organizations/{membership.id}", headers=auth_headers(user)
+        f"/user_organizations/{membership.id}", headers=auth_headers(user)
     )
     assert response.status_code == 200
     assert response.json()["message"] == "Membership deleted"
@@ -136,7 +136,7 @@ def test_membership_not_found(client, create_user, auth_headers):
     user = create_user(username="member", email="member@example.com")
 
     response = client.get(
-        "/user-organizations/00000000-0000-0000-0000-000000000000",
+        "/user_organizations/00000000-0000-0000-0000-000000000000",
         headers=auth_headers(user),
     )
     assert response.status_code == 404
@@ -146,7 +146,7 @@ def test_join_invalid_organization(client, create_user, auth_headers):
     user = create_user(username="member", email="member@example.com")
 
     response = client.post(
-        "/user-organizations",
+        "/user_organizations",
         headers=auth_headers(user),
         json={
             "user_id": str(user.id),
@@ -162,7 +162,7 @@ def test_join_invalid_user(client, create_user, create_organization, auth_header
     org = create_organization(name="Test Company")
 
     response = client.post(
-        "/user-organizations",
+        "/user_organizations",
         headers=auth_headers(user),
         json={
             "user_id": "00000000-0000-0000-0000-000000000000",
