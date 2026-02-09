@@ -16,7 +16,7 @@ def test_agent_preserves_sensitive_text(monkeypatch):
     monkeypatch.setattr(agent_module, "CohereClient", DummyClient)
     agent_module.SESSION_MEMORY.clear()
 
-    agent = agent_module.SchedulingAgent("hello", session_id="s1")
+    agent = agent_module.PolicyAgent("hello", session_id="s1")
     result = agent.run()
     assert "test@example.com" in result["response"]
     assert "555-555-1234" in result["messages"][0]["message"]
@@ -34,7 +34,7 @@ def test_agent_trims_history(monkeypatch):
     monkeypatch.setattr(agent_module, "CohereClient", DummyClient)
     agent_module.SESSION_MEMORY.clear()
 
-    agent = agent_module.SchedulingAgent("hello", session_id="s2")
+    agent = agent_module.PolicyAgent("hello", session_id="s2")
     result = agent.run()
     assert len(result["messages"]) == agent_module.MAX_HISTORY + 5
     assert len(agent_module.SESSION_MEMORY["s2"]) == agent_module.MAX_HISTORY
@@ -55,7 +55,7 @@ def test_ai_assistant_endpoint_uses_agent(
                 "messages": [{"role": "CHATBOT", "message": "ok"}],
             }
 
-    monkeypatch.setattr(ai_apis, "SchedulingAgent", DummyAgent)
+    monkeypatch.setattr(ai_apis, "PolicyAgent", DummyAgent)
     user = create_user(username="ai-user", email="ai-user@example.com")
     response = client.post(
         "/ai_assistant",
