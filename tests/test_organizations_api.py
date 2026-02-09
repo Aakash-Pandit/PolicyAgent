@@ -63,23 +63,20 @@ def test_policies_crud(client, create_user, create_organization, auth_headers):
     user = create_user(username="policy-user", email="policy-user@example.com")
     org = create_organization(name="Test Org")
 
-    # Create policy
+    # Create policy (using form data for file upload support)
     create_response = client.post(
         "/policies",
         headers=auth_headers(user),
-        json={
+        data={
             "organization_id": str(org.id),
             "name": "Standard Leave Policy",
             "description": "Standard policy for all employees",
-            "max_leave_days": 25,
-            "carry_forward_days": 5,
-            "is_active": True,
+            "is_active": "true",
         },
     )
     assert create_response.status_code == 200
     policy_id = create_response.json()["id"]
     assert create_response.json()["name"] == "Standard Leave Policy"
-    assert create_response.json()["max_leave_days"] == 25
 
     # List policies
     list_response = client.get("/policies", headers=auth_headers(user))
@@ -98,21 +95,19 @@ def test_policies_crud(client, create_user, create_organization, auth_headers):
     assert org_policies_response.status_code == 200
     assert org_policies_response.json()["total"] == 1
 
-    # Update policy
+    # Update policy (using form data)
     update_response = client.put(
         f"/policies/{policy_id}",
         headers=auth_headers(user),
-        json={
+        data={
             "organization_id": str(org.id),
             "name": "Updated Leave Policy",
             "description": "Updated description",
-            "max_leave_days": 30,
-            "carry_forward_days": 10,
-            "is_active": True,
+            "is_active": "true",
         },
     )
     assert update_response.status_code == 200
-    assert update_response.json()["max_leave_days"] == 30
+    assert update_response.json()["name"] == "Updated Leave Policy"
 
     # Delete policy
     delete_response = client.delete(f"/policies/{policy_id}", headers=auth_headers(user))
@@ -134,11 +129,40 @@ def test_policy_requires_valid_organization(client, create_user, auth_headers):
     response = client.post(
         "/policies",
         headers=auth_headers(user),
-        json={
+        data={
             "organization_id": "00000000-0000-0000-0000-000000000000",
             "name": "Invalid Policy",
-            "max_leave_days": 20,
-            "carry_forward_days": 5,
         },
     )
     assert response.status_code == 404
+
+
+def test_policy_with_file_upload(client, create_user, create_organization, auth_headers):
+    import io
+
+    user = create_user(username="file-user", email="file-user@example.com")
+    org = create_organization(name="File Test Org")
+
+    # Create a test file
+    test_file_content = b"This is a test policy document content."
+    test_file = io.BytesIO(test_file_content)
+
+    # Create policy with file upload
+    create_response = client.post(
+        "/policies",
+        headers=auth_headers(user),
+        data={
+            "organization_id": str(org.id),
+            "name": "Policy With File",
+            "description": "Policy with uploaded document",
+            "is_active": "true",
+        },
+        files={"file": ("test_policy.pdf", test_file, "application/pdf")},
+    )
+    assert create_response.status_code == 200
+    assert create_response.json()["document_name"] == "test_policy.pdf"
+    assert create_response.json()["file_path"] is not None
+
+    # Clean up - delete the policy
+    policy_id = create_response.json()["id"]
+    client.delete(f"/policies/{policy_id}", headers=auth_headers(user))

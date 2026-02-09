@@ -1,7 +1,23 @@
 ORGANIZATION_TOOLS = [
     {
+        "name": "get_organization_by_name",
+        "description": "Returns organization details by searching for the name.",
+        "parameter_definitions": {
+            "name": {
+                "description": "The name or partial name of the organization.",
+                "type": "str",
+                "required": True,
+            },
+        },
+    },
+    {
+        "name": "get_all_organizations",
+        "description": "Returns a list of all active organizations.",
+        "parameter_definitions": {},
+    },
+    {
         "name": "get_policies_for_organization",
-        "description": "Returns all leave policies for a specific organization.",
+        "description": "Returns all policies for a specific organization including document details.",
         "parameter_definitions": {
             "organization_name": {
                 "description": "The name of the organization.",
@@ -12,28 +28,12 @@ ORGANIZATION_TOOLS = [
     },
     {
         "name": "get_policy_details",
-        "description": "Returns details of a specific leave policy by name.",
+        "description": "Returns details of a specific policy by name including document name and file.",
         "parameter_definitions": {
             "policy_name": {
                 "description": "The name of the policy.",
                 "type": "str",
                 "required": True,
-            },
-        },
-    },
-    {
-        "name": "get_leave_allowance",
-        "description": "Returns the leave allowance (max leave days, carry forward days) for an organization.",
-        "parameter_definitions": {
-            "organization_name": {
-                "description": "The name of the organization.",
-                "type": "str",
-                "required": True,
-            },
-            "policy_name": {
-                "description": "Optional specific policy name to filter by.",
-                "type": "str",
-                "required": False,
             },
         },
     },

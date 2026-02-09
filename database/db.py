@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 
@@ -32,6 +32,12 @@ def get_db():
 
 
 def init_db():
+    try:
+        with engine.connect() as connection:
+            connection = connection.execution_options(isolation_level="AUTOCOMMIT")
+            connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    except Exception:
+        pass
     Base.metadata.create_all(bind=engine)
 
 
@@ -64,4 +70,18 @@ def drop_policies_table():
     from organizations.models import Policy
 
     Policy.__table__.drop(bind=engine, checkfirst=True)
+    init_db()
+
+
+def drop_leave_requests_table():
+    from users.models import LeaveRequest
+
+    LeaveRequest.__table__.drop(bind=engine, checkfirst=True)
+    init_db()
+
+
+def drop_user_organizations_table():
+    from organizations.models import UserOrganization
+
+    UserOrganization.__table__.drop(bind=engine, checkfirst=True)
     init_db()

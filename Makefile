@@ -4,6 +4,9 @@ start:
 stop:
 	docker-compose down
 
+remove:
+	docker-compose down -v --remove-orphans
+
 build:
 	docker-compose build
 

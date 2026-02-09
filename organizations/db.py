@@ -71,8 +71,8 @@ def get_policies_for_organization(organization_name: str):
                     "id": str(policy.id),
                     "name": policy.name,
                     "description": policy.description,
-                    "max_leave_days": policy.max_leave_days,
-                    "carry_forward_days": policy.carry_forward_days,
+                    "document_name": policy.document_name,
+                    "file_path": policy.file,
                     "is_active": policy.is_active,
                 }
                 for policy in policies
@@ -95,46 +95,9 @@ def get_policy_details(policy_name: str):
                 "id": str(policy.id),
                 "name": policy.name,
                 "description": policy.description,
-                "max_leave_days": policy.max_leave_days,
-                "carry_forward_days": policy.carry_forward_days,
+                "document_name": policy.document_name,
+                "file_path": policy.file,
                 "is_active": policy.is_active,
                 "organization": org.name if org else None,
             }
         return {"detail": "Policy not found", "name": policy_name}
-
-
-def get_leave_allowance(organization_name: str, policy_name: str | None = None):
-    """Get leave allowance for an organization or specific policy."""
-    with SessionLocal() as db:
-        org = (
-            db.query(Organization)
-            .filter(func.lower(Organization.name).contains(organization_name.lower()))
-            .first()
-        )
-        if not org:
-            return {"detail": "Organization not found"}
-
-        query = db.query(Policy).filter(
-            Policy.organization_id == org.id,
-            Policy.is_active == True,
-        )
-        
-        if policy_name:
-            query = query.filter(func.lower(Policy.name).contains(policy_name.lower()))
-        
-        policies = query.all()
-        
-        if not policies:
-            return {"detail": "No policies found", "organization": org.name}
-
-        return {
-            "organization": org.name,
-            "leave_policies": [
-                {
-                    "policy_name": p.name,
-                    "max_leave_days": p.max_leave_days,
-                    "carry_forward_days": p.carry_forward_days,
-                }
-                for p in policies
-            ],
-        }
