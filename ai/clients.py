@@ -8,9 +8,9 @@ from organizations.tools import ORGANIZATION_TOOLS
 
 
 class CohereClient:
-    def __init__(self, message: str | None = None):
+    def __init__(self, message: str | None = None, model: str | None = None):
         self.client = cohere.Client(os.getenv("COHERE_API_KEY"))
-        self.model = os.getenv("COHERE_LLM_MODEL")
+        self.model = model or os.getenv("COHERE_LLM_MODEL")
         self.preamble = PREAMBLE
         self.function_map = {
             **get_organization_function_map(),
@@ -97,3 +97,11 @@ class CohereClient:
             return str(e), chat_history or []
 
         return (response.text if response else ""), history
+
+    def embed_texts(self, texts: list[str], input_type: str) -> list[list[float]]:
+        response = self.client.embed(
+            texts=texts,
+            model=self.model,
+            input_type=input_type,
+        )
+        return response.embeddings or []
