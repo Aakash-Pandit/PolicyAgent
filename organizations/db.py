@@ -4,12 +4,12 @@ from database.db import SessionLocal
 from organizations.models import Organization, Policy
 
 
-def get_organization_by_name(name: str):
+def get_organization_details(organization_name: str):
     """Get organization details by name."""
     with SessionLocal() as db:
         org = (
             db.query(Organization)
-            .filter(func.lower(Organization.name).contains(name.lower()))
+            .filter(func.lower(Organization.name).contains(organization_name.lower()))
             .first()
         )
         if org:
@@ -22,30 +22,7 @@ def get_organization_by_name(name: str):
                 "phone": org.phone,
                 "is_active": org.is_active,
             }
-        return {"detail": "Organization not found", "name": name}
-
-
-def get_all_organizations():
-    """Get all active organizations."""
-    with SessionLocal() as db:
-        orgs = (
-            db.query(Organization)
-            .filter(Organization.is_active == True)
-            .order_by(Organization.name)
-            .all()
-        )
-        return {
-            "organizations": [
-                {
-                    "id": str(org.id),
-                    "name": org.name,
-                    "description": org.description,
-                    "is_active": org.is_active,
-                }
-                for org in orgs
-            ],
-            "total": len(orgs),
-        }
+        return {"detail": "Organization not found", "name": organization_name}
 
 
 def get_policies_for_organization(organization_name: str):
@@ -61,7 +38,7 @@ def get_policies_for_organization(organization_name: str):
 
         policies = (
             db.query(Policy)
-            .filter(Policy.organization_id == org.id, Policy.is_active == True)
+            .filter(Policy.organization_id == org.id, Policy.is_active.is_(True))
             .all()
         )
         return {
@@ -81,16 +58,16 @@ def get_policies_for_organization(organization_name: str):
         }
 
 
-def get_policy_details(policy_name: str):
+def get_policy_details(policy_name: str, organization_name: str):
     """Get policy details by name."""
     with SessionLocal() as db:
         policy = (
             db.query(Policy)
             .filter(func.lower(Policy.name).contains(policy_name.lower()))
+            .filter(func.lower(Organization.name).contains(organization_name.lower()))
             .first()
         )
         if policy:
-            org = db.query(Organization).filter(Organization.id == policy.organization_id).first()
             return {
                 "id": str(policy.id),
                 "name": policy.name,
@@ -98,6 +75,6 @@ def get_policy_details(policy_name: str):
                 "document_name": policy.document_name,
                 "file_path": policy.file,
                 "is_active": policy.is_active,
-                "organization": org.name if org else None,
+                "organization": organization_name,
             }
         return {"detail": "Policy not found", "name": policy_name}
