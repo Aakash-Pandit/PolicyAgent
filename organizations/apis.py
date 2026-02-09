@@ -1,9 +1,10 @@
-import os
+import logging
 
 from fastapi import Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from application.app import app
+from ai.rag import RAGClient
 from database.db import get_db
 from organizations.models import (
     Organization,
@@ -22,8 +23,10 @@ from organizations.models import (
     UserOrganizationsListResponse,
     UserOrganizationUpdate,
 )
-from organizations.utils import save_upload_file
+from organizations.utils import delete_file_if_exists, save_upload_file
 from users.models import User
+
+logger = logging.getLogger(__name__)
 
 
 # Organization APIs
@@ -251,6 +254,18 @@ async def create_policy(
     db.add(new_policy)
     db.commit()
     db.refresh(new_policy)
+    if file_path:
+        try:
+            RAGClient().index_policy_document(
+                policy_id=str(new_policy.id),
+                organization_id=str(new_policy.organization_id),
+                policy_name=new_policy.name,
+                description=new_policy.description,
+                document_name=new_policy.document_name,
+                file_path=file_path,
+            )
+        except Exception as exc:
+            logger.exception("Failed to index policy document", extra={"error": str(exc)})
 
     return PolicyResponse(
         id=str(new_policy.id),
@@ -285,8 +300,7 @@ async def update_policy(
     # Handle file upload
     if file and file.filename:
         # Delete old file if exists
-        if existing_policy.file and os.path.exists(existing_policy.file):
-            os.remove(existing_policy.file)
+        delete_file_if_exists(existing_policy.file)
         existing_policy.document_name = file.filename
         existing_policy.file = await save_upload_file(file)
 
@@ -296,6 +310,18 @@ async def update_policy(
     existing_policy.is_active = is_active
     db.commit()
     db.refresh(existing_policy)
+    if file and file.filename and existing_policy.file:
+        try:
+            RAGClient().index_policy_document(
+                policy_id=str(existing_policy.id),
+                organization_id=str(existing_policy.organization_id),
+                policy_name=existing_policy.name,
+                description=existing_policy.description,
+                document_name=existing_policy.document_name,
+                file_path=existing_policy.file,
+            )
+        except Exception as exc:
+            logger.exception("Failed to reindex policy document", extra={"error": str(exc)})
 
     return PolicyResponse(
         id=str(existing_policy.id),
@@ -315,8 +341,11 @@ async def delete_policy(policy_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Policy not found")
 
     # Delete associated file if exists
-    if policy.file and os.path.exists(policy.file):
-        os.remove(policy.file)
+    delete_file_if_exists(policy.file)
+    try:
+        RAGClient().remove_policy_from_index(str(policy.id))
+    except Exception as exc:
+        logger.exception("Failed to remove policy from index", extra={"error": str(exc)})
 
     db.delete(policy)
     db.commit()
