@@ -13,7 +13,7 @@ from database.db import get_db
 @app.post(
     "/ai_assistant",
     status_code=status.HTTP_200_OK,
-    summary="Chat with Database",
+    summary="Chat with Documents",
     response_description="Answer from the AI",
 )
 async def ai_assistant(request: QNARequestBody) -> QNAResponseBody:
