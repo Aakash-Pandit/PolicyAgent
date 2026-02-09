@@ -25,6 +25,7 @@ app.add_middleware(
 app.add_middleware(AuthenticationMiddleware, backend=JWTAuthBackend())
 
 import ai.apis
+import ai.db
 import auth.apis
 import organizations.apis
 import users.apis

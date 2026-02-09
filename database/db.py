@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 
@@ -32,6 +32,12 @@ def get_db():
 
 
 def init_db():
+    try:
+        with engine.connect() as connection:
+            connection = connection.execution_options(isolation_level="AUTOCOMMIT")
+            connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    except Exception:
+        pass
     Base.metadata.create_all(bind=engine)
 
 
