@@ -76,3 +76,57 @@ def test_user_type_helpers():
         require_admin("REGULAR")
     with pytest.raises(HTTPException):
         coerce_user_type("visitor")
+
+
+def test_create_user_duplicate_username_returns_409(client, create_user):
+    create_user(username="existing", email="first@example.com")
+    response = client.post(
+        "/users",
+        json={
+            "first_name": "Other",
+            "last_name": "User",
+            "username": "existing",
+            "password": "secret123",
+            "email": "second@example.com",
+            "phone": "5555552222",
+            "gender": "male",
+            "user_type": "REGULAR",
+            "date_of_birth": "1992-01-01T00:00:00",
+        },
+    )
+    assert response.status_code == 409
+    assert "username" in response.json()["detail"].lower()
+
+
+def test_create_user_duplicate_email_returns_409(client, create_user):
+    create_user(username="user1", email="same@example.com")
+    response = client.post(
+        "/users",
+        json={
+            "first_name": "Other",
+            "last_name": "User",
+            "username": "user2",
+            "password": "secret123",
+            "email": "same@example.com",
+            "phone": "5555553333",
+            "gender": "female",
+            "user_type": "REGULAR",
+            "date_of_birth": "1993-01-01T00:00:00",
+        },
+    )
+    assert response.status_code == 409
+    assert "email" in response.json()["detail"].lower()
+
+
+def test_delete_user_not_found_returns_404(client, create_user, auth_headers):
+    admin = create_user(
+        username="admin",
+        email="admin@example.com",
+        user_type=UserType.ADMIN,
+    )
+    response = client.delete(
+        "/users/00000000-0000-0000-0000-000000000000",
+        headers=auth_headers(admin),
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "User not found"
