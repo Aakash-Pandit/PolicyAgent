@@ -1,5 +1,14 @@
 ORGANIZATION_TOOLS = [
     {
+        "name": "get_my_organization_details",
+        "description": (
+            "Returns the organization(s) that the requesting user belongs to. "
+            "Use this when the user asks about 'my organization', 'details of my organization', "
+            "'tell me about my organization', or similar. Looks up the user's memberships and returns org details."
+        ),
+        "parameter_definitions": {},
+    },
+    {
         "name": "get_organization_details",
         "description": "Returns organization details by searching for the name.",
         "parameter_definitions": {
