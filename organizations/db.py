@@ -1,7 +1,7 @@
 from sqlalchemy import func
 
 from database.db import SessionLocal
-from organizations.models import Organization, Policy
+from organizations.models import Organization, Policy, UserOrganization
 
 
 def get_organization_details(organization_name: str):
@@ -23,6 +23,62 @@ def get_organization_details(organization_name: str):
                 "is_active": org.is_active,
             }
         return {"detail": "Organization not found", "name": organization_name}
+
+
+def get_my_organization_details(user_id: str):
+    """
+    Get organization details for the given user by looking up their memberships
+    in UserOrganization and returning the organizations they belong to.
+    """
+    with SessionLocal() as db:
+        memberships = (
+            db.query(UserOrganization)
+            .filter(
+                UserOrganization.user_id == user_id,
+                UserOrganization.is_active.is_(True),
+            )
+            .order_by(UserOrganization.joined_date.desc())
+            .all()
+        )
+        if not memberships:
+            return {
+                "detail": "You are not a member of any organization.",
+                "organizations": [],
+                "total": 0,
+            }
+        organizations = []
+        for m in memberships:
+            org = db.query(Organization).filter(Organization.id == m.organization_id).first()
+            if org:
+                organizations.append({
+                    "id": str(org.id),
+                    "name": org.name,
+                    "description": org.description,
+                    "address": org.address,
+                    "email": org.email,
+                    "phone": org.phone,
+                    "is_active": org.is_active,
+                    "membership_joined_date": str(m.joined_date) if m.joined_date else None,
+                })
+        return {
+            "organizations": organizations,
+            "total": len(organizations),
+            "message": f"Found {len(organizations)} organization(s) you belong to.",
+        }
+
+
+def get_organization_ids_for_user(user_id: str) -> list[str]:
+    """Return list of organization IDs (as strings) the user belongs to (active memberships)."""
+    with SessionLocal() as db:
+        rows = (
+            db.query(UserOrganization.organization_id)
+            .filter(
+                UserOrganization.user_id == user_id,
+                UserOrganization.is_active.is_(True),
+            )
+            .all()
+        )
+        return [str(r[0]) for r in rows]
 
 
 def get_policies_for_organization(organization_name: str):
