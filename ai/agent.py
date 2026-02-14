@@ -3,6 +3,7 @@ from typing import Any
 
 from ai.clients import CohereClient
 from ai.rag import RAGClient
+from ai.prompts import POLICY_PROMPT
 
 SESSION_MEMORY: dict[str, list[dict[str, str]]] = {}
 MAX_HISTORY = 20
@@ -27,11 +28,17 @@ POLICY_KEYWORDS = {
 
 
 class PolicyAgent:
-    def __init__(self, question: str, session_id: str | None = None):
+    def __init__(
+        self,
+        question: str,
+        session_id: str | None = None,
+        user_id: str | None = None,
+    ):
         self.question = question
         self.session_id = session_id
+        self.user_id = user_id
         self.max_steps = int(os.getenv("AI_AGENT_MAX_STEPS", "8"))
-        self.client = CohereClient()
+        self.client = CohereClient(user_id=user_id)
 
     def _trim_history(self, history: list[dict[str, str]]) -> list[dict[str, str]]:
         if len(history) <= MAX_HISTORY:
@@ -64,14 +71,7 @@ class PolicyAgent:
         if not excerpts:
             return None
 
-        prompt = (
-            "You are a policy assistant. Answer the question using only the policy "
-            "excerpts below. If the answer is not contained in the excerpts, say you "
-            "couldn't find it in the policy documents.\n\n"
-            "Policy excerpts:\n"
-            f"{os.linesep.join(excerpts)}\n\n"
-            f"Question: {question}"
-        )
+        prompt = POLICY_PROMPT.format(excerpts=excerpts, question=question)
         response_text, history = self.client.ask_llm(
             message=prompt,
             chat_history=history,
