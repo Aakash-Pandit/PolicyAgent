@@ -52,13 +52,6 @@ def drop_users_table():
     init_db()
 
 
-def drop_appointments_table():
-    from appointments.models import Appointment
-
-    Appointment.__table__.drop(bind=engine, checkfirst=True)
-    init_db()
-
-
 def drop_organizations_table():
     from organizations.models import Organization
 
