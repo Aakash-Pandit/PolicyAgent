@@ -171,3 +171,14 @@ def test_join_invalid_user(client, create_user, create_organization, auth_header
         },
     )
     assert response.status_code == 404
+
+
+def test_get_organizations_for_user_not_found(client, create_user, auth_headers):
+    user = create_user(username="member", email="member@example.com")
+
+    response = client.get(
+        "/users/00000000-0000-0000-0000-000000000000/organizations",
+        headers=auth_headers(user),
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "User not found"

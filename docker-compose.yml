@@ -3,8 +3,8 @@ services:
     build:
       context: .
       dockerfile: compose/Dockerfile
-    image: leave-query-app
-    container_name: leave-query-app
+    image: policy-agent-app
+    container_name: policy-agent-app
     ports:
       - "8000:8000"
     env_file:
@@ -24,7 +24,7 @@ services:
 
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: leave-query-db
+    container_name: policy-agent-db
     env_file:
       - .env
     volumes:

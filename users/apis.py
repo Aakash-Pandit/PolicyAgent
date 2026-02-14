@@ -129,13 +129,29 @@ async def get_organizations_for_user(user_id: str, db: Session = Depends(get_db)
 
 @app.post("/users", response_model=UserResponse)
 async def create_user(user: UserRequest, db: Session = Depends(get_db)):
+    username_lower = user.username.lower()
+    email_lower = (user.email or "").strip().lower()
+
+    existing_by_username = db.query(User).filter(User.username == username_lower).first()
+    if existing_by_username:
+        raise HTTPException(
+            status_code=409,
+            detail="A user with this username already exists",
+        )
+
+    if email_lower and db.query(User).filter(User.email == email_lower).first():
+        raise HTTPException(
+            status_code=409,
+            detail="A user with this email already exists",
+        )
+
     password_hash = hash_password(user.password)
     new_user = User(
         first_name=user.first_name.lower(),
         last_name=user.last_name.lower(),
-        username=user.username.lower(),
+        username=username_lower,
         password_hash=password_hash,
-        email=user.email,
+        email=email_lower or user.email,
         phone=user.phone,
         gender=user.gender,
         date_of_birth=user.date_of_birth,

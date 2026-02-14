@@ -40,3 +40,17 @@ def test_login_invalid_credentials(client):
         json={"username": "missing", "password": "nope"},
     )
     assert response.status_code == 401
+
+
+def test_protected_endpoint_without_token_returns_401(client):
+    response = client.get("/users")
+    assert response.status_code == 401
+    assert "detail" in response.json()
+
+
+def test_protected_endpoint_with_invalid_token_returns_401(client):
+    response = client.get(
+        "/users",
+        headers={"Authorization": "Bearer invalid-token-here"},
+    )
+    assert response.status_code == 401

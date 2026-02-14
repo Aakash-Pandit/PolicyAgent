@@ -342,3 +342,14 @@ def test_leave_request_not_found(client, create_user, auth_headers):
         headers=auth_headers(user),
     )
     assert response.status_code == 404
+
+
+def test_delete_leave_request_not_found(client, create_user, auth_headers):
+    user = create_user(username="user", email="user@example.com")
+
+    response = client.delete(
+        "/leave_requests/00000000-0000-0000-0000-000000000000",
+        headers=auth_headers(user),
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Leave request not found"

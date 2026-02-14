@@ -9,8 +9,8 @@ from auth.dependencies import require_authenticated_user
 from database.db import drop_db, init_db
 
 app = FastAPI(
-    title="Leave Query API",
-    description="API for managing leave queries using AI",
+    title="Policy AI Agent API",
+    description="API for managing policy queries using AI",
     version="1.0.0",
     dependencies=[Depends(require_authenticated_user)],
 )
@@ -45,7 +45,7 @@ async def drop_database():
 @app.get("/")
 async def root():
     return {
-        "message": "Welcome to Leave Query API using AI",
+        "message": "Welcome to Policy AI Agent API",
         "version": "1.0.0",
         "docs": "/docs",
     }

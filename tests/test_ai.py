@@ -4,6 +4,9 @@ from ai import apis as ai_apis
 
 def test_agent_preserves_sensitive_text(monkeypatch):
     class DummyClient:
+        def __init__(self, message=None, model=None, user_id=None, **kwargs):
+            pass
+
         def ask_llm(self, message=None, chat_history=None, max_steps=8):
             history = [
                 {
@@ -24,6 +27,9 @@ def test_agent_preserves_sensitive_text(monkeypatch):
 
 def test_agent_trims_history(monkeypatch):
     class DummyClient:
+        def __init__(self, message=None, model=None, user_id=None, **kwargs):
+            pass
+
         def ask_llm(self, message=None, chat_history=None, max_steps=8):
             history = [
                 {"role": "USER", "message": f"msg {idx}"}
@@ -44,7 +50,7 @@ def test_ai_assistant_endpoint_uses_agent(
     client, monkeypatch, create_user, auth_headers
 ):
     class DummyAgent:
-        def __init__(self, question, session_id=None):
+        def __init__(self, question, session_id=None, user_id=None):
             self.question = question
             self.session_id = session_id
 
@@ -66,3 +72,66 @@ def test_ai_assistant_endpoint_uses_agent(
     payload = response.json()
     assert payload["response"] == "ok"
     assert payload["messages"][0]["message"] == "ok"
+
+
+def test_policy_agent_passes_user_id_to_cohere_client(monkeypatch):
+    captured = {}
+
+    class FakeCohereClient:
+        def __init__(self, message=None, model=None, user_id=None):
+            captured["user_id"] = user_id
+
+        def ask_llm(self, message=None, chat_history=None, max_steps=8):
+            return "ok", []
+
+    monkeypatch.setattr(agent_module, "CohereClient", FakeCohereClient)
+    agent_module.SESSION_MEMORY.clear()
+
+    agent_module.PolicyAgent("hello", session_id="s1", user_id="user-123").run()
+    assert captured.get("user_id") == "user-123"
+
+
+def test_policy_agent_accepts_none_user_id(monkeypatch):
+    captured = {}
+
+    class FakeCohereClient:
+        def __init__(self, message=None, model=None, user_id=None):
+            captured["user_id"] = user_id
+
+        def ask_llm(self, message=None, chat_history=None, max_steps=8):
+            return "ok", []
+
+    monkeypatch.setattr(agent_module, "CohereClient", FakeCohereClient)
+    agent_module.SESSION_MEMORY.clear()
+
+    agent_module.PolicyAgent("hello", session_id="s2").run()
+    assert captured.get("user_id") is None
+
+
+def test_ai_assistant_passes_user_id_to_agent(
+    client, monkeypatch, create_user, auth_headers
+):
+    captured = {}
+
+    class SpyAgent:
+        def __init__(self, question, session_id=None, user_id=None):
+            captured["user_id"] = user_id
+            captured["question"] = question
+
+        def run(self):
+            return {
+                "response": "ok",
+                "session_id": None,
+                "messages": [],
+            }
+
+    monkeypatch.setattr(ai_apis, "PolicyAgent", SpyAgent)
+    user = create_user(username="spy-user", email="spy@example.com")
+    response = client.post(
+        "/ai_assistant",
+        json={"question": "What is my organization?"},
+        headers=auth_headers(user),
+    )
+    assert response.status_code == 200
+    assert captured.get("user_id") == str(user.id)
+    assert captured.get("question") == "What is my organization?"
