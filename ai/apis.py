@@ -7,6 +7,7 @@ from ai.agent import PolicyAgent
 from ai.db import PolicyEmbedding
 from ai.models import QNARequestBody, QNAResponseBody
 from application.app import app
+from auth.dependencies import require_authenticated_user
 from database.db import get_db
 
 
@@ -16,7 +17,10 @@ from database.db import get_db
     summary="Chat with Documents",
     response_description="Answer from the AI",
 )
-async def ai_assistant(request: QNARequestBody) -> QNAResponseBody:
+async def ai_assistant(
+    request: QNARequestBody,
+    current_user=Depends(require_authenticated_user),
+) -> QNAResponseBody:
     """
     Payload for the endpoint:
     {
@@ -24,9 +28,11 @@ async def ai_assistant(request: QNARequestBody) -> QNAResponseBody:
     }
     """
     session_id = request.session_id or str(uuid.uuid4())
+    user_id = current_user.user_id if current_user else None
     result = PolicyAgent(
         question=request.question,
         session_id=session_id,
+        user_id=user_id,
     ).run()
     return {
         "question": request.question,
