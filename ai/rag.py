@@ -1,12 +1,12 @@
 import logging
 import os
 import re
+import uuid
 from typing import Iterable
 
+import cohere
 import httpx
 from sqlalchemy import delete, select
-
-from ai.clients import CohereClient
 from ai.db import PolicyEmbedding
 from database.db import SessionLocal
 
@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 class RAGClient:
     def __init__(self, embed_model: str | None = None):
         self.embed_model = embed_model or os.getenv("COHERE_EMBED_MODEL", "embed-english-v3.0")
+        self.client = cohere.Client(os.getenv("COHERE_API_KEY"))
 
     def _looks_like_text(self, raw: bytes) -> bool:
         if not raw:
@@ -94,11 +95,14 @@ class RAGClient:
         return chunks
 
     def _embed_texts(self, texts: Iterable[str], input_type: str) -> list[list[float]]:
-        client = CohereClient(model=self.embed_model)
-        response = client.embed_texts(list(texts), input_type=input_type)
+        response = self.client.embed(
+            texts=list(texts),
+            model=self.embed_model,
+            input_type=input_type,
+        )
 
         logger.info(f"Embedded {len(texts)} texts with model {self.embed_model} & response: {response}")
-        return response
+        return response.embeddings or []
 
     def index_policy_document(
         self,
@@ -154,7 +158,12 @@ class RAGClient:
             return {"status": "skipped", "reason": "policy_not_found"}
         return {"status": "removed", "count": result.rowcount}
 
-    def query_policy_index(self, query: str, top_k: int = 5) -> list[dict]:
+    def query_policy_index(
+        self,
+        query: str,
+        top_k: int = 5,
+        organization_ids: list[str] | None = None,
+    ) -> list[dict]:
         query_embedding = self._embed_texts([query], input_type="search_query")
         if not query_embedding:
             return []
@@ -166,6 +175,12 @@ class RAGClient:
                 .order_by(PolicyEmbedding.embedding.cosine_distance(query_vector))
                 .limit(max(top_k, 1))
             )
+            if organization_ids:
+                try:
+                    uuids = [uuid.UUID(oid) for oid in organization_ids]
+                    stmt = stmt.where(PolicyEmbedding.organization_id.in_(uuids))
+                except (ValueError, TypeError):
+                    pass
             results = db.execute(stmt).scalars().all()
         response = []
         for record in results:
