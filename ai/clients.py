@@ -3,19 +3,33 @@ import os
 import cohere
 
 from ai.prompts import PREAMBLE
+from ai.tools import AI_TOOLS, get_ai_function_map
 from organizations.constants import get_organization_function_map
 from organizations.tools import ORGANIZATION_TOOLS
 
 
 class CohereClient:
-    def __init__(self, message: str | None = None, model: str | None = None):
+    def __init__(
+        self,
+        message: str | None = None,
+        model: str | None = None,
+        user_id: str | None = None,
+    ):
         self.client = cohere.Client(os.getenv("COHERE_API_KEY"))
         self.model = model or os.getenv("COHERE_LLM_MODEL")
         self.preamble = PREAMBLE
         self.function_map = {
-            **get_organization_function_map(),
+            **get_organization_function_map(user_id=user_id),
+            **get_ai_function_map(user_id=user_id),
         }
-        self.tools = [*ORGANIZATION_TOOLS]
+        tools = [*ORGANIZATION_TOOLS, *AI_TOOLS]
+        if user_id is None:
+            tools = [
+                t
+                for t in tools
+                if t.get("name") not in ("get_my_organization_details", "search_my_organization_policies")
+            ]
+        self.tools = tools
         self.message = message or ""
 
     def chat(
