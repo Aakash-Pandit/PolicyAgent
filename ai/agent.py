@@ -71,7 +71,8 @@ class PolicyAgent:
         if not excerpts:
             return None
 
-        prompt = POLICY_PROMPT.format(excerpts=excerpts, question=question)
+        excerpts_text = os.linesep.join(excerpts)
+        prompt = POLICY_PROMPT.format(excerpts_text=excerpts_text, question=question)
         response_text, history = self.client.ask_llm(
             message=prompt,
             chat_history=history,
