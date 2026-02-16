@@ -135,3 +135,59 @@ def test_ai_assistant_passes_user_id_to_agent(
     assert response.status_code == 200
     assert captured.get("user_id") == str(user.id)
     assert captured.get("question") == "What is my organization?"
+
+
+def test_get_my_pending_leaves_tool_registered_for_authenticated_user():
+    from ai.tools import AI_TOOLS, get_ai_function_map
+
+    tool_names = [t["name"] for t in AI_TOOLS]
+    assert "get_my_pending_leaves" in tool_names
+
+    fn_map = get_ai_function_map(user_id="test-uuid")
+    assert "get_my_pending_leaves" in fn_map
+
+
+def test_get_my_pending_leaves_tool_excluded_when_user_id_none():
+    from ai.clients import CohereClient
+
+    client = CohereClient(user_id=None)
+    tool_names = [t["name"] for t in client.tools]
+    assert "get_my_pending_leaves" not in tool_names
+
+
+def test_get_my_pending_leaves_returns_approved_and_policy(
+    app,
+    create_user,
+    create_organization,
+    create_user_organization,
+    create_leave_request,
+):
+    from users.choices import LeaveType
+
+    from ai.tools import get_ai_function_map
+
+    user = create_user(username="pending-user", email="pending@example.com")
+    org = create_organization(name="Pending Org")
+    create_user_organization(user_id=user.id, organization_id=org.id)
+    create_leave_request(
+        user_id=user.id, organization_id=org.id, is_accepted=True, leave_type=LeaveType.SICK_LEAVE
+    )
+
+    fn_map = get_ai_function_map(user_id=str(user.id))
+    result = fn_map["get_my_pending_leaves"]()
+
+    assert "approved_leaves" in result
+    assert "total_approved_days" in result
+    assert "policy_excerpts" in result
+    assert result["total_approved_days"] == 1
+    assert len(result["approved_leaves"]) == 1
+
+
+def test_policy_prompt_format_no_key_error():
+    """Ensure POLICY_PROMPT.format() does not raise KeyError (e.g. 'os')."""
+    from ai.prompts import POLICY_PROMPT
+
+    # Verify template uses safe placeholders
+    prompt = POLICY_PROMPT.format(excerpts_text="Sample excerpt", question="How many days?")
+    assert "Sample excerpt" in prompt
+    assert "How many days?" in prompt
