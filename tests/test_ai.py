@@ -161,10 +161,18 @@ def test_get_my_pending_leaves_returns_approved_and_policy(
     create_organization,
     create_user_organization,
     create_leave_request,
+    monkeypatch,
 ):
+    from unittest.mock import MagicMock
+
     from users.choices import LeaveType
 
-    from ai.tools import get_ai_function_map
+    from ai import tools as ai_tools
+
+    # Mock RAGClient so we don't hit Cohere/pgvector in tests
+    mock_rag = MagicMock()
+    mock_rag.query_policy_index.return_value = []
+    monkeypatch.setattr(ai_tools, "RAGClient", lambda: mock_rag)
 
     user = create_user(username="pending-user", email="pending@example.com")
     org = create_organization(name="Pending Org")
@@ -173,7 +181,7 @@ def test_get_my_pending_leaves_returns_approved_and_policy(
         user_id=user.id, organization_id=org.id, is_accepted=True, leave_type=LeaveType.SICK_LEAVE
     )
 
-    fn_map = get_ai_function_map(user_id=str(user.id))
+    fn_map = ai_tools.get_ai_function_map(user_id=str(user.id))
     result = fn_map["get_my_pending_leaves"]()
 
     assert "approved_leaves" in result
