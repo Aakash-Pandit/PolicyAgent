@@ -2,6 +2,7 @@ from sqlalchemy import func
 
 from database.db import SessionLocal
 from organizations.models import Organization, Policy, UserOrganization
+from users.models import LeaveRequest
 
 
 def get_organization_details(organization_name: str):
@@ -134,3 +135,49 @@ def get_policy_details(policy_name: str, organization_name: str):
                 "organization": organization_name,
             }
         return {"detail": "Policy not found", "name": policy_name}
+
+
+def get_my_approved_leaves_summary(user_id: str) -> dict:
+    """
+    Get the count of approved leaves for the given user, grouped by organization and leave type.
+    Used to compute pending/remaining leaves when combined with leave policy.
+    """
+    with SessionLocal() as db:
+        rows = (
+            db.query(
+                LeaveRequest.organization_id,
+                LeaveRequest.leave_type,
+                func.count(LeaveRequest.id).label("count"),
+            )
+            .filter(
+                LeaveRequest.user_id == user_id,
+                LeaveRequest.is_accepted.is_(True),
+            )
+            .group_by(LeaveRequest.organization_id, LeaveRequest.leave_type)
+            .all()
+        )
+        orgs = {}
+        if rows:
+            unique_org_ids = list({r[0] for r in rows})
+            org_list = (
+                db.query(Organization)
+                .filter(Organization.id.in_(unique_org_ids))
+                .all()
+            )
+            orgs = {str(o.id): o.name for o in org_list}
+
+        by_org = {}
+        total_approved = 0
+        for org_id, leave_type, count in rows:
+            org_name = orgs.get(str(org_id), "Unknown")
+            if org_id not in by_org:
+                by_org[str(org_id)] = {"organization_name": org_name, "by_type": {}, "total": 0}
+            by_org[str(org_id)]["by_type"][str(leave_type.value)] = count
+            by_org[str(org_id)]["total"] += count
+            total_approved += count
+
+        return {
+            "approved_leaves": list(by_org.values()),
+            "total_approved_days": total_approved,
+            "organizations": list(by_org.keys()),
+        }
