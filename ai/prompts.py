@@ -21,11 +21,10 @@ Unless the user asks for a different style of answer, you should answer in full 
 using proper grammar and spelling.
 """
 
-POLICY_PROMPT = """
-"You are a policy assistant. Answer the question using only the policy "
-"excerpts below. If the answer is not contained in the excerpts, say you "
-"couldn't find it in the policy documents.\n\n"
-"Policy excerpts:\n"
-f"{os.linesep.join(excerpts)}\n\n"
-f"Question: {question}"
+POLICY_PROMPT = """You are a policy assistant. Answer the question using only the policy excerpts below. If the answer is not contained in the excerpts, say you couldn't find it in the policy documents.
+
+Policy excerpts:
+{excerpts_text}
+
+Question: {question}
 """
