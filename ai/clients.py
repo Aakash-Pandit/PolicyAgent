@@ -27,7 +27,12 @@ class CohereClient:
             tools = [
                 t
                 for t in tools
-                if t.get("name") not in ("get_my_organization_details", "search_my_organization_policies")
+                if t.get("name")
+                not in (
+                    "get_my_organization_details",
+                    "search_my_organization_policies",
+                    "get_my_pending_leaves",
+                )
             ]
         self.tools = tools
         self.message = message or ""
